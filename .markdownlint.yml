@@ -1,0 +1,4 @@
+# Relaxed rules for this project
+MD013: false  # Line length — lab READMEs have long lines by design
+MD033: false  # Inline HTML — used in expected_output.md for formatting
+MD040: false  # Fenced code language — expected_output.md blocks are terminal output

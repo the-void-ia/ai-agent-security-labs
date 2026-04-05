@@ -43,6 +43,7 @@ Demonstrates how mounting the Docker socket (`/var/run/docker.sock`) inside a co
 ## Why This Matters for AI Agents
 
 Agent frameworks sometimes mount the Docker socket so the agent can:
+
 - Create isolated environments for code execution
 - Manage containers as part of a workflow
 - Run tools in separate containers

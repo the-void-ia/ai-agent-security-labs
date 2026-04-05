@@ -1,0 +1,83 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+      - name: Run ShellCheck on all shell scripts
+        run: |
+          shopt -s globstar
+          shellcheck --severity=warning ./**/*.sh
+
+  lab-structure:
+    name: Lab structure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every lab has required files
+        run: |
+          status=0
+          for lab_dir in labs/0*_*/; do
+            lab=$(basename "$lab_dir")
+            for f in README.md exploit.sh expected_output.md probe.sh; do
+              if [ ! -f "$lab_dir$f" ]; then
+                echo "FAIL: $lab is missing $f"
+                status=1
+              fi
+            done
+          done
+          exit $status
+
+      - name: exploit.sh scripts have correct shebang and strict mode
+        run: |
+          status=0
+          for script in labs/0*_*/exploit.sh; do
+            lab=$(basename "$(dirname "$script")")
+            head -2 "$script" | grep -q '#!/usr/bin/env bash' || { echo "FAIL: $lab/exploit.sh missing shebang"; status=1; }
+            head -2 "$script" | grep -q 'set -euo pipefail' || { echo "FAIL: $lab/exploit.sh missing set -euo pipefail"; status=1; }
+          done
+          exit $status
+
+      - name: exploit.sh scripts source shared libs
+        run: |
+          status=0
+          for script in labs/0*_*/exploit.sh; do
+            lab=$(basename "$(dirname "$script")")
+            grep -q 'source.*lib/output\.sh' "$script" || { echo "FAIL: $lab/exploit.sh does not source lib/output.sh"; status=1; }
+            grep -q 'source.*lib/voidbox\.sh' "$script" || { echo "FAIL: $lab/exploit.sh does not source lib/voidbox.sh"; status=1; }
+          done
+          exit $status
+
+      - name: probe.sh scripts have correct shebang and strict mode
+        run: |
+          status=0
+          for script in labs/0*_*/probe.sh; do
+            lab=$(basename "$(dirname "$script")")
+            head -2 "$script" | grep -q '#!/usr/bin/env bash' || head -2 "$script" | grep -q '#!/bin/sh' || { echo "FAIL: $lab/probe.sh missing shebang"; status=1; }
+          done
+          exit $status
+
+      - name: run_all.sh exists and is executable
+        run: test -x run_all.sh
+
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: |
+            README.md
+            labs/*/README.md
+            labs/*/expected_output.md

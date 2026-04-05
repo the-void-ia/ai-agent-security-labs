@@ -38,18 +38,21 @@ This is the most sophisticated of the container escape techniques. It doesn't ju
 ## What to Observe
 
 **On cgroups v2 (Docker Desktop, modern Linux):**
+
 - The script attempts the exploit and shows exactly where it fails (cgroup v1 mount)
 - Explains why: cgroups v2 removed the `release_agent` mechanism
 - Walks through the full attack chain so you understand the technique
 - Assertions verify the exploit is correctly blocked
 
 **On cgroups v1 (older Linux hosts):**
+
 - The exploit succeeds — a script is executed on the host as root
 - The output file contains the host's hostname, kernel, and process list
 - Compare these with the container's own hostname/kernel to confirm the escape
 - Assertions verify v1 mount and release_agent write succeeded
 
 **Void-Box (any cgroup version):**
+
 - The VM has its own kernel with its own cgroup hierarchy
 - Even if cgroups v1 were present, `release_agent` would execute inside the guest kernel, not on the host
 - Assertions verify different kernel from host (proving hardware boundary)
