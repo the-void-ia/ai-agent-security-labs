@@ -57,15 +57,15 @@ Each lab runs the exploit in Docker, then attempts the same thing in a void-box 
 
 ```
 Docker Container:                    Void-Box Micro-VM:
-┌─────────────┐                     ┌─────────────────┐
-│  Container   │                     │  Guest VM        │
-│  (process)   │                     │  (own kernel)    │
-├─────────────┤                     ├─────────────────┤
-│  Shared      │ ← escape here      │  Guest Kernel    │ ← isolated
-│  Host Kernel │                     ├─────────────────┤
-└─────────────┘                     │  VMM (KVM/VZ)    │
+┌──────────────┐                    ┌─────────────────┐
+│  Container   │                    │  Guest VM       │
+│  (process)   │                    │  (own kernel)   │
+├──────────────┤                    ├─────────────────┤
+│  Shared      │ ← escape here      │  Guest Kernel   │ ← isolated
+│  Host Kernel │                    ├─────────────────┤
+└──────────────┘                    │  VMM (KVM/VZ)   │
                                     ├─────────────────┤
-                                    │  Host Kernel     │ ← not reachable
+                                    │  Host Kernel    │ ← not reachable
                                     └─────────────────┘
 ```
 
