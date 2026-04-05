@@ -1,18 +1,30 @@
 # Expected Output: Lab 04 - Cgroup Escape
 
+> Terminal output includes color highlighting (bold headers, red/green/yellow for
+> PASS/FAIL/WARN, colored summary table). Colors are auto-disabled when piped.
+
 ## On cgroups v2 (Docker Desktop, modern Linux)
+
+The exploit fails at step 1 — cgroups v2 removed the release_agent mechanism. The script explains the full attack chain for educational purposes.
 
 ```
 === Lab 04: Cgroup Escape (release_agent) ===
 
+[Host]   hostname=your-hostname  kernel=6.x.x-...
+[*] void-box not found — void-box sections will show expected behavior.
+    ...
+
 [*] This exploit uses cgroups v1 release_agent to execute
     commands on the HOST from inside a container.
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Docker: Cgroup Escape
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 [*] Launching container with CAP_SYS_ADMIN and AppArmor disabled...
 
-[*] Inside the container. Collecting environment info...
-
-    hostname=b8f01233c5e1
+[Docker] Inside the container:
+    hostname=abc123def456
     kernel=6.10.14-linuxkit
 
 [*] Detected cgroups: v2
@@ -39,23 +51,63 @@
     The key insight: release_agent runs in the HOST kernel context,
     not inside the container. This is arbitrary code execution as root
     on the host, using a legitimate kernel feature.
+
+[Docker] Environment probe results:
+    cgroup_version=v2
+    can_mount_cgroupv1=NO
+    release_agent_writable=NO
+    probe_hostname=abc123def456  probe_kernel=6.10.14-linuxkit
+
+[Docker] Verifying exploit results...
+    [PASS] can_mount_cgroupv1=NO (cgroups v2 — v1 mount correctly blocked)
+    [PASS] release_agent_writable=NO (no v1 subsystem to write to)
+
+[Docker] RESULT: Exploit blocked by cgroups v2 (v1 mount unavailable).
+    On cgroups v1 (older Linux hosts), this exploit achieves root code execution on the host.
+    The technique is well-documented and actively used in container breakouts.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Void-Box: Same Escape Attempt
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[*] Even if the exploit succeeded, release_agent would execute inside
+    the VM's kernel — not on the host. The hardware boundary (KVM/VZ)
+    means guest kernel exploits stay in the guest.
+[*] Running the SAME probe.sh inside a void-box micro-VM...
+
+[Void-Box] Expected (void-box not installed):
+    cgroup_version=v2         (guest kernel's cgroups)
+    can_mount_cgroupv1=NO     (no v1 subsystem available)
+    release_agent_writable=NO (no release_agent to set)
+    probe_kernel=<vm-kernel>  (different from host — own kernel)
+
+[Void-Box] Assertions skipped (void-box not installed).
+[Void-Box] Expected: own kernel, release_agent targets guest only, host unreachable.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Summary
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+┌─────────────────────┬──────────────────────────┬──────────────────────────┐
+│                     │ Docker                   │ Void-Box                 │
+├─────────────────────┼──────────────────────────┼──────────────────────────┤
+│ Mount cgroup v1?    │ NO (v2 blocks it)        │ N/A (expected)           │
+│ release_agent?      │ N/A (v2)                 │ guest kernel only        │
+│ Escape to host?     │ BLOCKED (v2)             │ NO (expected)            │
+├─────────────────────┼──────────────────────────┼──────────────────────────┤
+│ Blast radius        │ BLOCKED (v2 only)        │ NONE                     │
+└─────────────────────┴──────────────────────────┴──────────────────────────┘
+
+[*] In Docker, release_agent runs in the HOST kernel context — code execution as root.
+    In void-box, it runs in the GUEST kernel — the host is unreachable.
+    cgroups v2 mitigates this in Docker, but many production systems still use v1.
 ```
 
 ## On Linux with cgroups v1
 
+The Docker section shows the full exploit succeeding:
+
 ```
-=== Lab 04: Cgroup Escape (release_agent) ===
-
-[*] This exploit uses cgroups v1 release_agent to execute
-    commands on the HOST from inside a container.
-
-[*] Launching container with CAP_SYS_ADMIN and AppArmor disabled...
-
-[*] Inside the container. Collecting environment info...
-
-    hostname=a1b2c3d4e5f6
-    kernel=5.4.0-150-generic
-
 [*] Detected cgroups: v1
 
 [*] Step 1: Attempting to mount cgroup v1 (rdma subsystem)...
@@ -81,18 +133,47 @@
     === Host processes (top 10) ===
     USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
     root         1  0.0  0.1 169236 11456 ?        Ss   Jan01   1:23 /sbin/init
-    root         2  0.0  0.0      0     0 ?        S    Jan01   0:00 [kthreadd]
     ...
 
-    [!] The process list above shows HOST processes, not container processes.
-    [!] hostname and kernel confirm this ran outside the container.
+[Docker] Verifying exploit results...
+    [PASS] can_mount_cgroupv1=YES (v1 subsystem mountable)
+    [PASS] release_agent_writable=YES (can set host code execution path)
+    [PASS] kernel=5.4.0-150-generic (shared with host — release_agent runs on host)
+
+[Docker] RESULT: Arbitrary code execution as root on the host via release_agent.
 ```
 
-## Key Observation
+The summary table on v1 shows:
 
-On cgroups v1, the exploit achieves **arbitrary code execution as root on the host**. The proof:
-- `hostname` and `kernel` in the output match the **host**, not the container
-- Process list shows host services (init, kthreadd, systemd), not container processes
-- The script ran outside all container namespaces
+```
+│ Blast radius        │ CRITICAL                 │ NONE                     │
+```
 
-On cgroups v2, the exploit fails at step 1 — this is a real mitigation, but many production environments still run cgroups v1.
+## With void-box installed
+
+```
+[Void-Box] Environment probe results:
+    cgroup_version=v2
+    can_mount_cgroupv1=NO
+    release_agent_writable=NO
+    probe_hostname=void-box  probe_kernel=6.1.x
+
+[Void-Box] Verifying isolation claims...
+    [PASS] kernel=6.1.x (different from host: 25.3.0 — own kernel)
+    [PASS] can_mount_cgroupv1=NO (no v1 subsystem available)
+    [PASS] release_agent_writable=NO (no release_agent to set)
+
+[Void-Box] RESULT: Own kernel. release_agent stays in guest. Host unreachable.
+```
+
+## Key Observations
+
+1. **On cgroups v1**: The exploit achieves arbitrary code execution as root on the host. The proof: `hostname`, `kernel`, and process list match the host, not the container.
+
+2. **On cgroups v2**: The exploit fails at step 1 — cgroups v2 is a real mitigation. But many production environments still run cgroups v1 (RHEL 7/8, older Ubuntu, etc.).
+
+3. **Void-box**: Even if the exploit succeeded within the VM, `release_agent` would execute in the guest kernel. The host kernel is behind the hardware virtualization boundary and is unreachable. This is why the "different kernel" assertion is the key proof point.
+
+4. **Adaptive assertions**: On v2, the Docker assertions verify the exploit is correctly *blocked*. On v1, they verify it *succeeds*. The summary table and blast radius adapt to what actually happened.
+
+5. **Same probe, both environments**: The identical `probe.sh` checks cgroup version, mount capability, and release_agent writability in both Docker and void-box.

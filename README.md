@@ -7,8 +7,8 @@ These labs demonstrate why containers sharing a kernel with the host are insuffi
 ## Prerequisites
 
 - Docker installed and running
-- Linux host with root access (or macOS with Docker Desktop for labs 01-04)
-- [void-box](https://github.com/the-void-ia/void-box) installed (for lab 05)
+- Linux host with root access (or macOS with Docker Desktop)
+- [void-box](https://github.com/the-void-ia/void-box) installed (optional — each lab gracefully shows expected void-box behavior if not available)
 - Basic familiarity with shell scripting and containers
 
 > **Warning:** Labs 02-04 demonstrate real container escape techniques. Run them only on disposable VMs or test machines. Never run them on production systems.
@@ -19,22 +19,67 @@ These labs demonstrate why containers sharing a kernel with the host are insuffi
 git clone https://github.com/the-void-ia/ai-agent-security-labs.git
 cd ai-agent-security-labs
 
-# Run a specific lab
+# Run all labs
+./run_all.sh
+
+# Or run a specific lab
 cd labs/01_prompt_injection
 ./exploit.sh
 ```
 
 Each lab is self-contained. Read the lab's `README.md` for step-by-step instructions, then run `exploit.sh` and compare against `expected_output.md`.
 
+### Using a custom void-box build
+
+If `voidbox` is not on your `PATH`, or you want to test a local build, point the labs at your binary and assets:
+
+```bash
+VOIDBOX_BIN=~/dev/repos/void-box/target/release/voidbox \
+  VOID_BOX_KERNEL=~/dev/repos/void-box/target/vmlinux-arm64 \
+  VOID_BOX_INITRAMFS=~/dev/repos/void-box/target/void-box-rootfs.cpio.gz \
+  ./run_all.sh
+```
+
+The same env vars work with individual lab scripts (`./exploit.sh`). If none are set, labs fall back to the `voidbox` binary on `PATH` — and if that's not found either, void-box sections show expected behavior without running a VM.
+
 ## Labs
 
-| # | Lab | What it demonstrates | Requires |
-|---|-----|---------------------|----------|
-| 01 | [Prompt Injection](labs/01_prompt_injection/) | Agent executes attacker-controlled input as instructions | Docker |
-| 02 | [Docker Socket Escape](labs/02_docker_socket_escape/) | Mounted Docker socket gives full host access | Docker |
-| 03 | [Privileged Container Escape](labs/03_privileged_container_escape/) | `--privileged` container mounts host disk | Docker + Linux |
-| 04 | [Cgroup Escape](labs/04_cgroup_escape/) | cgroups v1 `release_agent` executes commands on host | Docker + Linux (cgroups v1) |
-| 05 | [Void-Box Comparison](labs/05_void_box_comparison/) | Same exploits fail inside a micro-VM | Docker + void-box |
+Each lab runs the exploit in Docker, then attempts the same thing in a void-box micro-VM to show the difference.
+
+| # | Lab | What it demonstrates | Docker result | Void-Box result |
+|---|-----|---------------------|---------------|-----------------|
+| 01 | [Prompt Injection](labs/01_prompt_injection/) | Agent follows attacker-injected instructions | Secrets leaked, exfil possible | Nothing to steal |
+| 02 | [Docker Socket Escape](labs/02_docker_socket_escape/) | Mounted Docker socket gives full host access | Full host control | No socket exists |
+| 03 | [Privileged Container Escape](labs/03_privileged_container_escape/) | `--privileged` container mounts host disk | Host filesystem access | No host devices |
+| 04 | [Cgroup Escape](labs/04_cgroup_escape/) | cgroups v1 `release_agent` executes on host | Root code exec on host | Guest kernel only |
+
+## Architecture: Docker vs Void-Box
+
+```
+Docker Container:                    Void-Box Micro-VM:
+┌─────────────┐                     ┌─────────────────┐
+│  Container   │                     │  Guest VM        │
+│  (process)   │                     │  (own kernel)    │
+├─────────────┤                     ├─────────────────┤
+│  Shared      │ ← escape here      │  Guest Kernel    │ ← isolated
+│  Host Kernel │                     ├─────────────────┤
+└─────────────┘                     │  VMM (KVM/VZ)    │
+                                    ├─────────────────┤
+                                    │  Host Kernel     │ ← not reachable
+                                    └─────────────────┘
+```
+
+In Docker, an exploit in the container reaches the host kernel directly. In void-box, an exploit in the VM reaches the guest kernel — the host kernel is behind the hardware virtualization boundary.
+
+### Void-Box Security Features
+
+- **Hardware isolation**: Each agent runs in a KVM/VZ-backed micro-VM with its own kernel
+- **Seccomp-BPF**: Syscall filtering even within the guest
+- **Command allowlists**: Only declared commands can execute
+- **Resource limits**: CPU and memory caps enforced by the VMM
+- **SLIRP networking**: User-mode networking without host network access
+- **vsock communication**: Point-to-point host-guest channel, no network stack
+- **Declared capabilities**: Skills not mounted in the VM don't exist at runtime
 
 ## Background
 
@@ -46,7 +91,9 @@ But containers share a kernel with the host. Labs 02-04 show three real escape p
 2. **Privileged mode** - `--privileged` exposes host block devices, allowing direct disk mounting
 3. **Cgroup v1 release_agent** - a kernel mechanism intended for resource cleanup becomes an escape vector
 
-Void-box takes a different approach: each agent runs in its own KVM-backed micro-VM with its own kernel. The three escape paths above don't exist because there is no shared kernel, no Docker socket, and no host disk visible from the VM.
+Lab 01 shows a different class of attack: **prompt injection** doesn't need any container misconfiguration — the agent uses its *legitimate* shell access to follow attacker instructions.
+
+Void-box takes a different approach: each agent runs in its own KVM-backed micro-VM with its own kernel. The container escape paths don't exist because there is no shared kernel, no Docker socket, and no host disk visible from the VM. And for prompt injection, the blast radius is near-zero because secrets aren't injected into the VM and network access is restricted.
 
 ## Why Simulated Agents?
 
@@ -61,17 +108,18 @@ These labs use deterministic shell scripts to simulate agent behavior rather tha
 ```
 ai-agent-security-labs/
   README.md                              # This file
+  run_all.sh                             # Run all labs in sequence
   labs/
+    lib/output.sh                        # Shared output helpers (colors, assertions)
+    lib/voidbox.sh                       # Shared void-box helpers
     01_prompt_injection/
-      README.md / exploit.sh / expected_output.md
+      exploit.sh / probe.sh / README.md / expected_output.md
     02_docker_socket_escape/
-      README.md / exploit.sh / expected_output.md
+      exploit.sh / probe.sh / README.md / expected_output.md
     03_privileged_container_escape/
-      README.md / exploit.sh / expected_output.md
+      exploit.sh / probe.sh / README.md / expected_output.md
     04_cgroup_escape/
-      README.md / exploit.sh / expected_output.md
-    05_void_box_comparison/
-      README.md / exploit.sh / expected_output.md
+      exploit.sh / probe.sh / README.md / expected_output.md
 ```
 
 ## References
