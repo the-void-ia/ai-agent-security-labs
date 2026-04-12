@@ -66,6 +66,8 @@
 [Void-Box] RESULT: No credentials found. Declaration model prevents oversharing.
 ```
 
+The void-box section is intentionally a deny-by-default baseline: no credential files are declared, so none are visible. To match the targeted Docker case exactly, the workflow spec would need an explicit file declaration for `.git-credentials`.
+
 ## Summary Table
 
 ```

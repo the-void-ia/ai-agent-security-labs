@@ -49,7 +49,7 @@ This is the most sophisticated of the container escape techniques. It doesn't ju
 - The exploit succeeds — a script is executed on the host as root
 - The output file contains the host's hostname, kernel, and process list
 - Compare these with the container's own hostname/kernel to confirm the escape
-- Assertions verify v1 mount and release_agent write succeeded
+- Assertions verify v1 mount, release_agent write, and host-side payload execution succeeded
 
 **Void-Box (any cgroup version):**
 

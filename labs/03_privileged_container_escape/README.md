@@ -2,12 +2,12 @@
 
 ## Overview
 
-Demonstrates how a container running with `--privileged` (or `--cap-add=SYS_ADMIN`) can mount the host's disk and gain full filesystem access. Some agent setups use privileged mode to simplify device access or avoid permission issues.
+Demonstrates how a container running with `--privileged` (or `--cap-add=SYS_ADMIN`) can mount the host's disk and gain host filesystem access. Some agent setups use privileged mode to simplify device access or avoid permission issues.
 
 ## What You'll Learn
 
 - `--privileged` exposes all host block devices (`/dev/sda`, `/dev/vda`, etc.) to the container
-- The container can mount these devices and access the host's entire filesystem
+- The container can mount these devices and access host filesystem data
 - On Docker Desktop, this includes all other containers' data (Docker data directory)
 - Even `--cap-add=SYS_ADMIN` alone (without full `--privileged`) is enough
 - Void-box eliminates the attack surface: the VM has its own kernel, no host devices visible
@@ -23,7 +23,7 @@ Demonstrates how a container running with `--privileged` (or `--cap-add=SYS_ADMI
 
 1. A container starts with `--privileged` (simulating an agent that needs device access)
 2. Inside the container, `fdisk -l` reveals the host's physical block devices
-3. The container mounts the host's root partition at `/mnt/host`
+3. The container mounts a discovered host partition at `/mnt/host` (read-only for demo safety)
 4. The container reads host files: `/etc/hostname`, `/etc/shadow`, Docker data, SSH keys
 5. The same probe runs in void-box — no devices visible, no mount possible, no host data
 
@@ -36,11 +36,13 @@ Demonstrates how a container running with `--privileged` (or `--cap-add=SYS_ADMI
 ## What to Observe
 
 - **Block devices exposed**: `fdisk -l` shows real host disks that a container should never see
-- **Host disk mounted**: The container mounts `/dev/vda1` (or `/dev/sda1`) and gains full access
+- **Host disk mounted**: The container mounts a discovered host partition read-only and proves it can inspect host data
 - **Sensitive data readable**: `/etc/shadow` (password hashes), SSH keys, Docker data directory
 - **Docker data = all containers**: On Docker Desktop, the mounted disk contains all containers' filesystems, meaning one privileged container can read every other container's data
-- **Docker assertions verify**: devices visible, disk mounted, host files readable
+- **Docker assertions verify**: devices visible, disk mounted, concrete host artifacts readable
 - **Void-Box assertions verify**: no devices, no mount, no host files, different kernel
+
+The lab mounts read-only to avoid modifying the host during the demo. With the same privileges, a read-write mount is also possible.
 
 ## Mitigation
 

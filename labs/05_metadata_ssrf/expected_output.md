@@ -1,9 +1,9 @@
 # Lab 05: Expected Output
 
-## Docker (default networking): Cloud Metadata SSRF
+## Docker (simulated cloud reachability): Cloud Metadata SSRF
 
 ```
-[Docker] Inside the agent container (DEFAULT config — no --privileged, no caps):
+[Docker] Inside the agent container (simulated cloud reachability — no --privileged, no caps):
     hostname=<container-id>
     kernel=<host-kernel>
 
@@ -34,7 +34,7 @@
     [PASS] instance_id=i-0abc123def456789a (instance identity exposed)
     [PASS] userdata_accessible=YES (bootstrap secrets exposed)
 
-[Docker] RESULT: IAM credentials stolen via metadata SSRF. (4/4 assertions passed)
+[Docker] RESULT: IAM credentials stolen via simulated metadata SSRF. (4/4 assertions passed)
 ```
 
 ## Docker (network-isolated): Same SSRF Attempt
@@ -60,7 +60,7 @@
 
 ```
 ┌─────────────────────┬───────────────────┬───────────────────┬───────────────────┐
-│                     │ Docker (default)  │ Docker (isolated) │ Void-Box          │
+│                     │ Docker (cloud)    │ Docker (isolated) │ Void-Box          │
 ├─────────────────────┼───────────────────┼───────────────────┼───────────────────┤
 │ Metadata reachable? │ YES               │ NO                │ NO                │
 │ IAM creds stolen?   │ YES               │ NO                │ NO                │

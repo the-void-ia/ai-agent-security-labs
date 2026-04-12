@@ -53,6 +53,7 @@ Docker: Cgroup Escape
     on the host, using a legitimate kernel feature.
 
 [Docker] Environment probe results:
+    host_exec_proof=NO  host_exec_hostname=none  host_exec_kernel=none
     cgroup_version=v2
     can_mount_cgroupv1=NO
     release_agent_writable=NO
@@ -138,7 +139,8 @@ The Docker section shows the full exploit succeeding:
 [Docker] Verifying exploit results...
     [PASS] can_mount_cgroupv1=YES (v1 subsystem mountable)
     [PASS] release_agent_writable=YES (can set host code execution path)
-    [PASS] kernel=5.4.0-150-generic (shared with host — release_agent runs on host)
+    [PASS] host_exec_proof=YES (payload produced host-side output)
+    [PASS] kernel=5.4.0-150-generic (shared with host — release_agent targets host kernel)
 
 [Docker] RESULT: Arbitrary code execution as root on the host via release_agent.
 ```
@@ -174,6 +176,6 @@ The summary table on v1 shows:
 
 3. **Void-box**: Even if the exploit succeeded within the VM, `release_agent` would execute in the guest kernel. The host kernel is behind the hardware virtualization boundary and is unreachable. This is why the "different kernel" assertion is the key proof point.
 
-4. **Adaptive assertions**: On v2, the Docker assertions verify the exploit is correctly *blocked*. On v1, they verify it *succeeds*. The summary table and blast radius adapt to what actually happened.
+4. **Adaptive assertions**: On v2, the Docker assertions verify the exploit is correctly *blocked*. On v1, they verify not just setup preconditions but concrete host-side execution evidence. The summary table and blast radius adapt to what actually happened.
 
 5. **Same probe, both environments**: The identical `probe.sh` checks cgroup version, mount capability, and release_agent writability in both Docker and void-box.

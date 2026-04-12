@@ -4,7 +4,7 @@
 
 Demonstrates how an AI agent executing inside a Docker container can be hijacked via prompt injection — attacker-controlled text embedded in untrusted input (a GitHub issue title) that the LLM interprets as instructions.
 
-This reproduces the core mechanism behind the [Clinejection attack](https://adnanthekhan.com/posts/clinejection/), where a prompt injection in a GitHub issue title led to supply chain compromise of ~4,000 machines.
+This reproduces the core mechanism behind the [Clinejection attack](https://adnanthekhan.com/posts/clinejection/): prompt injection in a GitHub issue title steering an agent into dangerous tool use, which later chained into a broader release-token compromise and unauthorized package publication.
 
 **Key distinction**: This is *not* shell command injection (unsanitized input passed to `eval`). It's prompt injection — the LLM cannot distinguish the developer's system prompt from the attacker's text injected into the data. The agent uses its *legitimate* shell access to execute what the LLM decides, which is now under attacker control.
 

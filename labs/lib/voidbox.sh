@@ -50,8 +50,10 @@ voidbox_status() {
 run_in_voidbox() {
     local name="$1"
     local cmd="$2"
+    local tmpdir
     local spec_file
-    spec_file=$(mktemp /tmp/voidbox-lab-XXXXXX.yaml)
+    tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/voidbox-lab.XXXXXX" 2>/dev/null || mktemp -d -t voidbox-lab)
+    spec_file="$tmpdir/spec.yaml"
 
     # Write the YAML spec with the shell command as a block scalar.
     # Every line of $cmd must be indented to the YAML block level (12 spaces).
@@ -82,7 +84,7 @@ EOF
 
     local raw_output
     raw_output=$("$VOIDBOX_BIN" run --file "$spec_file" --no-banner 2>&1)
-    rm -f "$spec_file"
+    rm -rf "$tmpdir"
 
     if echo "$raw_output" | grep -q "success: true"; then
         echo "OK"

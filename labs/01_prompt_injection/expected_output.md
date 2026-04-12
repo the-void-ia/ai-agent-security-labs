@@ -107,7 +107,7 @@ Summary
     - Attacker injects instructions via GitHub issue title
     - AI agent (Cline) follows injected instructions over its system prompt
     - Agent exfiltrates secrets using its legitimate tool access
-    - Result: supply chain compromise of ~4,000 machines
+    - Later chained into release-token abuse and unauthorized package publication
 ```
 
 ## With void-box installed

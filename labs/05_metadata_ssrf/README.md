@@ -2,15 +2,15 @@
 
 ## Overview
 
-Demonstrates how a container with **default networking** (no `--privileged`, no special capabilities) can reach the cloud instance metadata service at `169.254.169.254`, stealing IAM credentials, instance identity, and user-data bootstrap secrets.
+Demonstrates the cloud metadata credential-theft path using a mock service bound to `169.254.169.254` on a dedicated Docker network. This simulates the real cloud condition where a container can reach the instance metadata service and steal IAM credentials, instance identity, and user-data bootstrap secrets.
 
-Then shows that Docker **can** mitigate this with explicit network isolation — but the default is vulnerable. Void-box blocks it by default because SLIRP networking doesn't route link-local addresses.
+Then shows that Docker **can** mitigate this with explicit network isolation once metadata reachability exists. Void-box blocks link-local metadata access by default because SLIRP networking doesn't route those addresses.
 
 **The lesson**: The attack surface is the same in both systems. The difference is in the defaults — Docker requires opt-in mitigation, void-box is safe out of the box.
 
 ## What You'll Learn
 
-- The cloud metadata service is reachable from any container with default Docker networking on a cloud VM
+- The cloud metadata service becomes a credential theft vector whenever a container can reach `169.254.169.254`
 - IAM credentials attached to the host VM are accessible to every container on that host
 - User-data scripts often contain hardcoded secrets (database passwords, deploy keys)
 - **Docker can block this** — with network isolation, iptables rules, or IMDSv2 hop-limit=1
@@ -25,7 +25,7 @@ Then shows that Docker **can** mitigate this with explicit network isolation —
 ## How It Works
 
 1. A mock metadata service starts at `169.254.169.254` on a Docker network (simulating the real cloud endpoint)
-2. **Docker (default)**: agent container on the same network reaches the metadata endpoint and steals IAM credentials
+2. **Docker (simulated vulnerable cloud path)**: agent container on the same network reaches the metadata endpoint and steals IAM credentials
 3. **Docker (isolated)**: agent container on an internal network cannot reach the metadata endpoint
 4. **Void-box**: agent in a micro-VM cannot reach the metadata endpoint (SLIRP blocks link-local by default)
 
@@ -37,20 +37,20 @@ Then shows that Docker **can** mitigate this with explicit network isolation —
 
 ## What to Observe
 
-- **Docker (default)**: metadata reachable, IAM credentials stolen, user-data exposed — 4/4 assertions pass
+- **Docker (simulated vulnerable cloud path)**: metadata reachable, IAM credentials stolen, user-data exposed — 4/4 assertions pass
 - **Docker (isolated)**: metadata unreachable, no credentials stolen — mitigation works
 - **Void-Box**: metadata unreachable by default — no explicit mitigation needed
-- The summary table shows three columns: Docker default (vulnerable), Docker mitigated (safe), void-box (safe by default)
+- The summary table shows three columns: simulated vulnerable Docker, mitigated Docker, and void-box default behavior
 
 ## Fair Comparison
 
 This lab uses a mock metadata service to simulate the cloud endpoint. On a real cloud VM:
 
-- **Docker default networking** routes to `169.254.169.254` — containers can reach it without any special flags
+- **The first Docker scenario** simulates a vulnerable cloud setup by placing a mock service at `169.254.169.254` on a Docker network
 - **Docker with `--net=internal`** or iptables rules blocks the route — but requires explicit configuration
 - **Void-box SLIRP networking** does not route link-local addresses — blocked without any configuration
 
-Both Docker and void-box can block this attack. The difference is that Docker requires the developer to know about the risk and explicitly mitigate it, while void-box blocks it by default.
+Both Docker and void-box can block this attack. The difference is that Docker requires the developer to know about the risk and explicitly mitigate it, while void-box blocks link-local metadata access by default.
 
 ## Mitigations
 

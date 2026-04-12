@@ -33,8 +33,8 @@ Docker: Privileged Container Escape
     These are the HOST disks, not the container's. The container
     should not be able to see physical block devices.
 
-[*] Step 2: Mounting /dev/vda1...
-    mount: SUCCESS — host disk now accessible at /mnt/host
+[*] Step 2: Mounting /dev/vda1 read-only (proof without modifying host)...
+    mount: SUCCESS — host disk now readable at /mnt/host
 
 [*] Step 3: Reading data from the mounted host disk:
 
@@ -65,7 +65,7 @@ Docker: Privileged Container Escape
     [PASS] can_mount_host_disk=YES (mounted /dev/vda1)
     [PASS] can_read_docker_data=YES (3 containers' data accessible)
 
-[Docker] RESULT: Full host filesystem access via --privileged. (3/3 assertions passed)
+[Docker] RESULT: Host disk mounted and concrete host data exposed via --privileged. (3/3 assertions passed)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Void-Box: Same Escape Attempt
@@ -135,7 +135,7 @@ On a real Linux host, the Docker output includes more host files:
     [PASS] can_read_shadow=YES (password hashes accessible)
     [PASS] can_read_docker_data=YES (15 containers' data accessible)
 
-[Docker] RESULT: Full host filesystem access via --privileged. (5/5 assertions passed)
+[Docker] RESULT: Host disk mounted and concrete host data exposed via --privileged. (5/5 assertions passed)
 ```
 
 ## With void-box installed
@@ -167,6 +167,8 @@ On a real Linux host, the Docker output includes more host files:
 
 3. **Docker data = all containers**: On Docker Desktop, the mounted disk contains Docker's data directory — `containers`, `volumes` — meaning one privileged container can read every other container's filesystem and data.
 
-4. **Platform-adaptive assertions**: On Docker Desktop, the probe finds Docker data but no `/etc/hostname` or `/etc/shadow` (the data partition doesn't have them). On native Linux, all host files are accessible. The assertion count adapts dynamically.
+4. **Platform-adaptive assertions**: On Docker Desktop, the probe finds Docker data but may not find `/etc/hostname` or `/etc/shadow` on the mounted partition. On native Linux, more host files are often accessible. The lab only declares success when it finds at least one concrete host artifact after the mount.
 
-5. **Same probe, both environments**: The identical `probe.sh` runs in Docker (where `--privileged` enables the escape) and void-box (where no host devices exist). The hardware boundary makes the difference.
+5. **Read-only demo, same boundary failure**: The lab mounts read-only to avoid modifying the host during a demo. The isolation break is already proven once the container can mount a host partition and read host-only data.
+
+6. **Same probe, both environments**: The identical `probe.sh` runs in Docker (where `--privileged` enables the escape) and void-box (where no host devices exist). The hardware boundary makes the difference.

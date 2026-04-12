@@ -21,9 +21,12 @@ fi
 
 # --- Find a mountable partition ---
 ROOT_DEV=""
-for dev in /dev/sda1 /dev/vda1 /dev/nvme0n1p1 /dev/xvda1; do
-    if [ -b "$dev" ]; then
-        ROOT_DEV="$dev"
+PARTITION_CANDIDATES=$(awk 'NR > 2 { print $4 }' /proc/partitions 2>/dev/null \
+    | grep -E '([0-9]$|p[0-9]+$)' \
+    | grep -Ev '^(loop|ram|fd|sr|md)')
+for part in $PARTITION_CANDIDATES; do
+    if [ -b "/dev/$part" ]; then
+        ROOT_DEV="/dev/$part"
         break
     fi
 done
@@ -34,7 +37,7 @@ CAN_MOUNT="NO"
 MOUNTED_PATH=""
 if [ -n "$ROOT_DEV" ]; then
     mkdir -p /mnt/host_probe 2>/dev/null || true
-    if mount "$ROOT_DEV" /mnt/host_probe 2>/dev/null; then
+    if mount -o ro "$ROOT_DEV" /mnt/host_probe 2>/dev/null; then
         CAN_MOUNT="YES"
         MOUNTED_PATH="/mnt/host_probe"
     fi

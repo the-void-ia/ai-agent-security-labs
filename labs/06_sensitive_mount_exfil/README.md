@@ -2,9 +2,9 @@
 
 ## Overview
 
-Demonstrates how Docker's permissive mount model leads to credential oversharing. A developer who wants an agent to push code to GitHub mounts `~/.ssh` — which also exposes AWS keys, Kubernetes configs, GCP credentials, and more.
+Demonstrates how Docker's permissive mount model leads to credential oversharing. A developer who wants an agent to push code to GitHub mounts several convenience credential paths (`~/.ssh`, `~/.aws`, `~/.kube`, `~/.config/gcloud`) and exposes far more than the agent actually needs.
 
-Then shows that Docker **can** be used safely with targeted mounts (only `.git-credentials`), and that void-box achieves the same result through its explicit declaration model.
+Then shows that Docker **can** be used safely with targeted mounts (only `.git-credentials`), and that void-box starts from a deny-by-default baseline through its explicit declaration model.
 
 **The lesson**: Docker and void-box can both limit credential access. The difference is in which mistake is easier to make — Docker's broad mounts are the path of least resistance, while void-box requires explicit declarations for every file.
 
@@ -27,7 +27,7 @@ Then shows that Docker **can** be used safely with targeted mounts (only `.git-c
 1. Mock credential files are created (simulating a developer's home directory)
 2. **Docker (broad mounts)**: all credential directories mounted — agent finds 5 credential types
 3. **Docker (targeted mount)**: only `.git-credentials` mounted — agent finds only what it needs
-4. **Void-box**: no files declared in workflow spec — agent finds nothing
+4. **Void-box**: no files declared in workflow spec — agent finds nothing until the developer explicitly opts in
 
 ## Credential Files Tested
 
@@ -51,11 +51,11 @@ Then shows that Docker **can** be used safely with targeted mounts (only `.git-c
 - **Docker (targeted mount)**: only git credentials found — the safe approach
 - **Void-Box**: 0 credentials found — nothing declared in workflow spec
 - **The summary table shows three columns**, making the honest comparison visible
-- Docker targeted and void-box achieve the same result — but void-box's declaration model makes oversharing harder
+- Docker targeted and void-box both avoid oversharing, but the lab's void-box section demonstrates the stricter deny-by-default starting point
 
 ## Fair Comparison
 
-This lab does **not** claim that Docker is inherently insecure for credential management. A careful developer who mounts only `.git-credentials` gets the same result as void-box.
+This lab does **not** claim that Docker is inherently insecure for credential management. A careful developer who mounts only `.git-credentials` can avoid oversharing too.
 
 The difference is structural:
 

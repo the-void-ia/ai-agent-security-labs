@@ -92,7 +92,7 @@ But containers share a kernel with the host. Labs 02-04 show three real escape p
 1. **Docker socket** - mounting `/var/run/docker.sock` lets a container create sibling containers with full host access
 2. **Privileged mode** - `--privileged` exposes host block devices, allowing direct disk mounting
 3. **Cgroup v1 release_agent** - a kernel mechanism intended for resource cleanup becomes an escape vector
-4. **Cloud metadata SSRF** - default container networking reaches the cloud metadata service, stealing IAM credentials without any misconfiguration
+4. **Cloud metadata SSRF** - if a container can reach the cloud metadata service, it can steal IAM credentials without any container escape
 5. **Sensitive file mounts** - "convenience" volume mounts (`~/.aws`, `~/.ssh`, `~/.kube`) hand credentials directly to the agent
 
 Lab 01 shows a different class of attack: **prompt injection** doesn't need any container misconfiguration — the agent uses its *legitimate* shell access to follow attacker instructions. Labs 05-06 show that even without container escapes, agents can steal credentials via cloud metadata services and mounted credential files.
