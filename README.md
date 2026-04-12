@@ -52,6 +52,8 @@ Each lab runs the exploit in Docker, then attempts the same thing in a void-box 
 | 02 | [Docker Socket Escape](labs/02_docker_socket_escape/) | Mounted Docker socket gives full host access | Full host control | No socket exists |
 | 03 | [Privileged Container Escape](labs/03_privileged_container_escape/) | `--privileged` container mounts host disk | Host filesystem access | No host devices |
 | 04 | [Cgroup Escape](labs/04_cgroup_escape/) | cgroups v1 `release_agent` executes on host | Root code exec on host | Guest kernel only |
+| 05 | [Cloud Metadata SSRF](labs/05_metadata_ssrf/) | Default networking reaches cloud metadata service | IAM credentials stolen | Metadata unreachable |
+| 06 | [Sensitive Mount Exfil](labs/06_sensitive_mount_exfil/) | Mounted credential dirs (`~/.aws`, `~/.ssh`, etc.) | All credentials readable | No host mounts |
 
 ## Architecture: Docker vs Void-Box
 
@@ -90,8 +92,10 @@ But containers share a kernel with the host. Labs 02-04 show three real escape p
 1. **Docker socket** - mounting `/var/run/docker.sock` lets a container create sibling containers with full host access
 2. **Privileged mode** - `--privileged` exposes host block devices, allowing direct disk mounting
 3. **Cgroup v1 release_agent** - a kernel mechanism intended for resource cleanup becomes an escape vector
+4. **Cloud metadata SSRF** - default container networking reaches the cloud metadata service, stealing IAM credentials without any misconfiguration
+5. **Sensitive file mounts** - "convenience" volume mounts (`~/.aws`, `~/.ssh`, `~/.kube`) hand credentials directly to the agent
 
-Lab 01 shows a different class of attack: **prompt injection** doesn't need any container misconfiguration — the agent uses its *legitimate* shell access to follow attacker instructions.
+Lab 01 shows a different class of attack: **prompt injection** doesn't need any container misconfiguration — the agent uses its *legitimate* shell access to follow attacker instructions. Labs 05-06 show that even without container escapes, agents can steal credentials via cloud metadata services and mounted credential files.
 
 Void-box takes a different approach: each agent runs in its own KVM-backed micro-VM with its own kernel. The container escape paths don't exist because there is no shared kernel, no Docker socket, and no host disk visible from the VM. And for prompt injection, the blast radius is near-zero because secrets aren't injected into the VM and network access is restricted.
 
@@ -119,6 +123,10 @@ ai-agent-security-labs/
     03_privileged_container_escape/
       exploit.sh / probe.sh / README.md / expected_output.md
     04_cgroup_escape/
+      exploit.sh / probe.sh / README.md / expected_output.md
+    05_metadata_ssrf/
+      exploit.sh / probe.sh / README.md / expected_output.md
+    06_sensitive_mount_exfil/
       exploit.sh / probe.sh / README.md / expected_output.md
 ```
 

@@ -21,6 +21,8 @@ ai-agent-security-labs/
     02_docker_socket_escape/    # Escape via mounted Docker socket
     03_privileged_container_escape/  # Escape via --privileged disk mount
     04_cgroup_escape/           # Escape via cgroups v1 release_agent
+    05_metadata_ssrf/           # Cloud metadata SSRF via default networking
+    06_sensitive_mount_exfil/   # Credential theft via mounted host dirs
 ```
 
 Each lab contains:
@@ -57,7 +59,9 @@ Each lab contains:
 - **Evidence-based**: Each exploit shows concrete proof (host files read, host
   processes listed, different kernels visible) rather than just pass/fail labels.
 - **Side-by-side comparison**: Each lab runs the exploit in Docker, then shows
-  the same attempt in void-box to make the isolation difference visible.
+  the same attempt in void-box to make the isolation difference visible. When
+  Docker can mitigate the attack with explicit configuration, include a third
+  section showing the mitigated Docker setup alongside the default.
 - **Graceful degradation**: Scripts handle platform differences (macOS vs Linux,
   cgroups v1 vs v2) and explain what would happen on the target platform. When
   void-box is not available, expected behavior is shown inline.
@@ -70,6 +74,17 @@ Each lab contains:
   alone is not enough — assertions make the lab trustworthy and regression-safe.
   Docker assertions verify the exploit *succeeds* (e.g., secrets >= 4). Void-box
   assertions verify the exploit is *contained* (e.g., secrets = 0).
+- **Fair comparisons**: Never rig the comparison by using a different
+  configuration for void-box than for Docker. If Docker is vulnerable because of
+  a specific flag or mount, show that Docker can also be fixed — then explain
+  whether the fix requires opt-in (Docker) or is the default (void-box). The
+  claim should be about defaults and guardrails, not about one system being
+  inherently broken. A lab that shows Docker with `--privileged` vs void-box
+  without it is a fair comparison (the escape requires that flag). A lab that
+  mounts credentials into Docker but not void-box, then attributes the
+  difference to "isolation", is not — the difference is in the configuration,
+  not the technology. When in doubt, add a mitigated Docker section to prove
+  Docker can also be safe, then let the reader decide which default they prefer.
 - **Honest reporting**: Report what actually happens, even when inconvenient.
   If busybox bundles `wget` in the void-box initramfs, report it as `[WARN]`
   with context — don't hide it. Honesty builds trust in the lab's conclusions.
@@ -133,6 +148,8 @@ cd labs/01_prompt_injection && ./exploit.sh
 cd labs/02_docker_socket_escape && ./exploit.sh
 cd labs/03_privileged_container_escape && ./exploit.sh
 cd labs/04_cgroup_escape && ./exploit.sh
+cd labs/05_metadata_ssrf && ./exploit.sh
+cd labs/06_sensitive_mount_exfil && ./exploit.sh
 ```
 
 All labs require Docker. Void-box is optional — each lab shows expected void-box
